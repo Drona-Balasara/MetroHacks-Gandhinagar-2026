@@ -1,0 +1,5 @@
+weather_id,forecast_date,time_band_start,time_band_end,location,temperature_celsius,precipitation_mm,weather_condition,source_reference,data_status,notes
+WX-1,2026-10-15,05:00,10:00,Ahmedabad,28,0,clear,HeadwayIQ scenario input,manually_entered,"Clear morning; precipitation 0 is an observed zero, not missing data"
+WX-2,2026-10-15,10:00,16:00,Ahmedabad,34,0,heat,HeadwayIQ scenario input,manually_entered,"Hot afternoon scenario"
+WX-3,2026-07-20,16:00,20:00,Ahmedabad,27,42,heavy_rain,HeadwayIQ scenario input,manually_entered,"Rainy-day scenario during PM peak"
+WX-4,2026-07-20,20:00,23:00,Ahmedabad,,,rain,HeadwayIQ scenario input,manually_entered,"Temperature and precipitation unknown and left blank (not zero)"

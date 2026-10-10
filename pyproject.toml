@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "headwayiq"
+version = "0.1.0"
+description = "Event-aware metro headway recommendation system — Phase 1 data foundation"
+requires-python = ">=3.10"
+dependencies = []            # Phase 1 runtime is standard-library only
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[tool.setuptools]
+packages = ["headwayiq"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

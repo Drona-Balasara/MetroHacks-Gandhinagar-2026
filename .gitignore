@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+
+# HeadwayIQ runtime database (generated; fixtures in data/fixtures/ are source)
+data/*.db
+data/*.sqlite
+
+# Environment variables and secrets
+.env
+.env.*
+secrets/
+
+# Credentials and keys
+*.pem
+*.key
+credentials.json
+
+# Editor-specific and temporary artifacts
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store

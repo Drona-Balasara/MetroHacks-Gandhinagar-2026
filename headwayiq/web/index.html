@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HeadwayIQ — Event-Aware Metro Headway Recommendations</title>
+<style>
+  :root{
+    --purple:#7132f5; --purple-dark:#5741d8; --purple-subtle:rgba(133,91,251,0.16);
+    --ink:#101114; --cool:#686b82; --silver:#9497a9; --border:#dedee5;
+    --green:#149e61; --green-bg:rgba(20,158,97,0.16); --green-dark:#026b3f;
+    --neutral-bg:rgba(104,107,130,0.12); --neutral-ink:#484b5e;
+    --surface:#fff; --shadow:rgba(0,0,0,0.03) 0 4px 24px; --micro:rgba(16,24,40,0.04) 0 1px 4px;
+    --font:"IBM Plex Sans","Helvetica Neue",Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#f7f7fb;color:var(--ink);font-family:var(--font);line-height:1.38}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:20px 24px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  h1{font-size:28px;font-weight:700;letter-spacing:-0.5px;margin:0}
+  h1 .iq{color:var(--purple)}
+  .tag{font-size:14px;color:var(--silver);margin-top:4px}
+  main{padding:24px 0 64px}
+  .scenarios{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 20px}
+  .chip{font-size:14px;font-weight:500;padding:8px 14px;border-radius:12px;border:1px solid var(--border);
+        background:var(--surface);color:var(--ink);cursor:pointer;transition:.12s}
+  .chip:hover{border-color:var(--purple-dark)}
+  .chip.active{background:var(--purple);color:#fff;border-color:var(--purple)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+        box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+  .card h2{font-size:22px;font-weight:600;margin:0 0 4px}
+  .muted{color:var(--silver);font-size:14px}
+  .prov{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .badge{font-size:12px;padding:4px 8px;border-radius:8px;background:var(--neutral-bg);color:var(--neutral-ink)}
+  .badge.warn{background:rgba(234,179,8,.16);color:#854d0e}
+  .summary{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 0}
+  .stat{flex:1;min-width:120px;border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+  .stat .n{font-size:26px;font-weight:700;letter-spacing:-0.5px}
+  .stat .l{font-size:12px;color:var(--cool);text-transform:uppercase;letter-spacing:.3px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.3px;color:var(--cool);font-weight:600}
+  .dir{font-size:13px;font-weight:600;color:var(--purple);padding-top:16px}
+  .pill{font-size:12px;font-weight:600;padding:3px 9px;border-radius:9999px;white-space:nowrap}
+  .pill.increase_frequency{background:var(--purple-subtle);color:var(--purple)}
+  .pill.reduce_frequency{background:var(--neutral-bg);color:var(--neutral-ink)}
+  .pill.maintain{background:var(--green-bg);color:var(--green-dark)}
+  .pill.no_service{background:var(--neutral-bg);color:var(--silver)}
+  .hw{font-weight:600}
+  .arrow{color:var(--silver)}
+  .lvl{font-size:12px;color:var(--cool)}
+  details.why summary{cursor:pointer;color:var(--purple-dark);font-size:13px;list-style:none}
+  details.why summary::-webkit-details-marker{display:none}
+  details.why[open] summary{margin-bottom:6px}
+  details.why p{margin:0;font-size:13px;color:var(--neutral-ink);max-width:70ch}
+  .state{padding:48px 24px;text-align:center;color:var(--cool)}
+  .state.err{color:#b91c1c}
+  .spinner{width:22px;height:22px;border:3px solid var(--border);border-top-color:var(--purple);
+           border-radius:50%;display:inline-block;animation:spin .8s linear infinite;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .foot{font-size:12px;color:var(--silver);margin-top:24px}
+  @media(max-width:640px){.summary{gap:6px}.stat{min-width:45%}th:nth-child(5),td:nth-child(5){display:none}}
+</style>
+</head>
+<body>
+<header><div class="wrap" style="padding:0">
+  <h1>Headway<span class="iq">IQ</span></h1>
+  <div class="tag">Event-aware metro headway recommendations · Ahmedabad Metro (GMRC) · offline prototype</div>
+</div></header>
+<main class="wrap">
+  <div id="scenarios" class="scenarios" aria-label="demo scenarios"></div>
+  <div id="content"></div>
+  <div class="foot">
+    Reference headways: official GMRC timetable (effective 2026-05-18). Demand &amp; adjustments: synthetic/illustrative.
+    Recommendations are decision support, not an operating order — validate against live counts before use.
+  </div>
+</main>
+<script>
+const $ = (s, r=document) => r.querySelector(s);
+const content = $("#content");
+const fmt = m => (m==null ? "—" : (Number.isInteger(m)?m:m.toFixed(1)) + " min");
+const esc = s => (s??"").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const LABEL = {increase_frequency:"Increase", reduce_frequency:"Reduce",
+               maintain:"Maintain", no_service:"No service"};
+const LVL = {below_normal:"below normal", normal:"normal", elevated:"elevated", high:"high"};
+
+function stat(n, l){ return `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`; }
+
+function row(b){
+  const change = (b.change_pct==null || b.action==="maintain" || b.action==="no_service")
+    ? "" : ` <span class="lvl">(${b.change_pct>0?"+":""}${b.change_pct}%)</span>`;
+  const rec = b.action==="no_service" ? "—"
+    : `${fmt(b.reference_headway_min)} <span class="arrow">→</span> <span class="hw">${fmt(b.recommended_headway_min)}</span>${change}`;
+  return `<tr>
+    <td>${b.band_start}–${b.band_end}</td>
+    <td><span class="pill ${b.action}">${LABEL[b.action]||b.action}</span></td>
+    <td>${rec}</td>
+    <td><span class="lvl">${LVL[b.demand_level]||b.demand_level} (×${b.demand_factor})</span></td>
+    <td><details class="why"><summary>Why</summary><p>${esc(b.explanation)}</p></details></td>
+  </tr>`;
+}
+
+function directionBlock(dir, bands){
+  const rows = bands.map(row).join("");
+  return `<tr><td class="dir" colspan="5">${dir.toUpperCase()}</td></tr>${rows}`;
+}
+
+function render(p){
+  if(p.error){ content.innerHTML = `<div class="state err">${esc(p.error)}</div>`; return; }
+  if(!p.bands || !p.bands.length){ content.innerHTML = `<div class="state">No recommendations for this scenario.</div>`; return; }
+  const s = p.summary;
+  const prov = Object.entries(p.provenance).map(([k,v]) =>
+    `<span class="badge">${k}: ${esc(v)}</span>`).join("");
+  const anyWarn = p.bands.some(b => b.warnings && b.warnings.length);
+  const warnBadge = anyWarn ? `<span class="badge warn">data-quality caveats present</span>` : "";
+
+  // group by line then direction, preserving engine order
+  const lines = [...new Set(p.bands.map(b=>b.line))];
+  let tables = "";
+  for(const line of lines){
+    const dirs = [...new Set(p.bands.filter(b=>b.line===line).map(b=>b.direction))];
+    const body = dirs.map(d => directionBlock(d, p.bands.filter(b=>b.line===line&&b.direction===d))).join("");
+    tables += `<div class="card"><h2>Line ${esc(line)}</h2>
+      <table><thead><tr><th>Time band</th><th>Action</th><th>Headway</th><th>Demand</th><th>Explain</th></tr></thead>
+      <tbody>${body}</tbody></table></div>`;
+  }
+
+  content.innerHTML = `
+    <div class="card">
+      <h2>${esc(p.title||p.scenario)}</h2>
+      <div class="muted">${esc(p.description||"")} · ${esc(p.date||"")} · ${esc(p.day_type)} · corridors: ${p.corridors.join(", ")}</div>
+      <div class="prov">${prov}${warnBadge}</div>
+    </div>
+    <div class="card"><div class="summary">
+      ${stat(s.bands,"bands")}${stat(s.increase_frequency,"increase")}
+      ${stat(s.reduce_frequency,"reduce")}${stat(s.maintain,"maintain")}${stat(s.no_service,"no service")}
+    </div></div>
+    ${tables}`;
+}
+
+async function load(name){
+  [...document.querySelectorAll(".chip")].forEach(c => c.classList.toggle("active", c.dataset.name===name));
+  content.innerHTML = `<div class="state"><span class="spinner"></span> Computing recommendations…</div>`;
+  try{
+    const r = await fetch("/api/recommend?scenario="+encodeURIComponent(name));
+    render(await r.json());
+  }catch(e){
+    content.innerHTML = `<div class="state err">Could not load recommendations: ${esc(String(e))}</div>`;
+  }
+}
+
+async function init(){
+  try{
+    const list = await (await fetch("/api/scenarios")).json();
+    $("#scenarios").innerHTML = list.map((s,i) =>
+      `<button class="chip${i===0?" active":""}" data-name="${s.name}" title="${esc(s.description)}">${esc(s.title)}</button>`).join("");
+    [...document.querySelectorAll(".chip")].forEach(c => c.addEventListener("click", () => load(c.dataset.name)));
+    if(list.length) load(list[0].name);
+  }catch(e){
+    content.innerHTML = `<div class="state err">Could not reach the engine: ${esc(String(e))}</div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+service_id,day_type,line_id,direction,time_band_start,time_band_end,baseline_headway_minutes,source_reference,data_status,notes
+BAD-1,weekday,NS,northbound,07:00,10:00,6,ref,manually_entered,ok baseline row
+BAD-1,weekday,NS,northbound,10:00,16:00,12,ref,manually_entered,duplicate service_id of BAD-1
+BAD-3,weekday,NS,northbound,08:00,09:00,6,ref,manually_entered,overlaps the 07:00-10:00 band of BAD-1
+BAD-4,,NS,southbound,07:00,10:00,6,ref,manually_entered,missing required day_type
+BAD-5,weekday,NS,southbound,07:00,10:00,-6,ref,manually_entered,negative headway
+BAD-6,weekday,NS,sideways,07:00,10:00,6,ref,manually_entered,invalid direction enum
+BAD-7,weekday,NS,eastbound,25:00,26:00,6,ref,manually_entered,invalid time value
+BAD-8,weekday,NS,westbound,16:00,10:00,6,ref,bogus_status,start after end and invalid data_status
